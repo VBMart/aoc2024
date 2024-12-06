@@ -3,6 +3,8 @@ import math
 import functools
 import concurrent.futures
 import time
+from multiprocessing import Pool
+
 
 debug_in_txt = """....#.....
 .........#
@@ -193,6 +195,16 @@ def golden(in_txt):
 
     print(loop_cnt)
 
+def check_loop(inpt):
+    ih, iw, lines = inpt
+    guard = Guard(0, 0, '^')
+    guard.parse_map(lines)
+    guard.world_map[ih][iw] = '#'
+    guard.go()
+    if guard.loop:
+        return 1
+    return 0
+
 def golden_thr(int_txt):
     lines = re.findall(r"([^\n]+)\n?", in_txt)
     guard = Guard(0, 0, '^')
@@ -203,25 +215,18 @@ def golden_thr(int_txt):
     print(f'{map_w}x{map_h}')
     tasks = []
     for step in guard.history:
-        tasks.append((step.r, step.c))
+        tasks.append((step.r, step.c, tuple(lines)))
     tasks = set(tasks)
     print(f'Tasks: {len(tasks)}')
 
-    def check_loop(inpt):
-        ih, iw = inpt
-        guard = Guard(0, 0, '^')
-        guard.parse_map(lines)
-        guard.world_map[ih][iw] = '#'
-        guard.go()
-        if guard.loop:
-            return 1
-        return 0
-
     start_time = time.time()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        results = list(executor.map(check_loop, tasks))
-        # print(results)
+    with Pool(12) as p:
+        results = p.map(check_loop, tasks)
         print(sum(results))
+    # with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    #     results = list(executor.map(check_loop, tasks))
+    #     # print(results)
+    #     print(sum(results))
     print(f'Time spent: {time.time() - start_time}')
 
 if __name__ == "__main__":
