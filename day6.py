@@ -1,9 +1,9 @@
 import re
 import math
 import functools
+import concurrent.futures
 
-
-in_txt = """....#.....
+debug_in_txt = """....#.....
 .........#
 ..........
 ..#.......
@@ -14,8 +14,12 @@ in_txt = """....#.....
 #.........
 ......#..."""
 
+def get_input(debug: bool = False):
+    if debug:
+        return debug_in_txt
+    with open('day6.txt', 'r') as f:
+        return f.read()
 
-lines = re.findall(r"([^\n]+)\n?", in_txt)
 
 class Step:
     r: int
@@ -47,6 +51,8 @@ class Guard:
         self.r = r
         self.c = c
         self.d = d
+        self.map_h = 0
+        self.map_w = 0
         self.world_map = []
         self.places = []
         self.history = []
@@ -118,9 +124,6 @@ class Guard:
                 self.loop = True
                 return
         self.history.append(Step(r=self.r, c=self.c, d=self.d))
-
-    def test_loop(self):
-        max_steps = 2 * self.map_w * self.map_h
     
     def get_places_count(self):
         cnt = 0
@@ -130,59 +133,104 @@ class Guard:
                     cnt += 1
         return cnt
 
-guard = Guard(r=0, c=0, d="^")
+    def parse_map(self, lines):
+        self.world_map = []
+        self.places = []
+        self.history = []
+        self.loop = False
+        self.leave = False
+        self.map_h = len(lines)
+        self.map_w = len(lines[0])
+        for ih in range(0, self.map_h):
+            m_l = []
+            g_l = []
+            for iw in range(0, self.map_w):
+                cell = lines[ih][iw]
+                m_l.append(cell)
+                if cell == '^':
+                    self.r = ih
+                    self.c = iw
+                    self.d = '^'
+                    g_l.append('X')
+                else:
+                    g_l.append('.')
+            self.world_map.append(m_l)
+            self.places.append(g_l)
 
-def parse_map():
-    global guard
-    guard = Guard(r=0, c=0, d="^")
-    guard.map_h = len(lines)
-    guard.map_w = len(lines[0])
-    for ih in range(0, guard.map_h):
-        m_l = []
-        g_l = []
-        for iw in range(0, guard.map_w):
-            cell = lines[ih][iw]
-            m_l.append(cell)
-            if cell == "^":
-                guard.r = ih
-                guard.c = iw
-                g_l.append('X')
+def silver(int_txt):
+    lines = re.findall(r"([^\n]+)\n?", in_txt)
+    guard = Guard(0, 0, '^')
+    guard.parse_map(lines)
+    for i in range(0, 100000):
+        guard.make_step()
+        if guard.leave:
+            break
+        #print(guard.history)
+        #guard.print_places()
+    print(guard)
+
+def golden(int_txt):
+    lines = re.findall(r"([^\n]+)\n?", in_txt)
+    guard = Guard(0, 0, '^')
+    guard.parse_map(lines)
+    map_w = guard.map_w
+    map_h = guard.map_h
+    loop_cnt = 0
+    print(f'{map_w}x{map_h}')
+    for ih in range(0, map_h):
+        for iw in range(0, map_w):
+            guard.parse_map(lines)
+            if guard.world_map[ih][iw] == '#' or guard.world_map[ih][iw] == '^':
+                continue
             else:
-                g_l.append('.')
-        guard.world_map.append(m_l)
-        guard.places.append(g_l)
+                guard.world_map[ih][iw] = '#'
 
-def silver():
-  for i in range(0, 100000):
-    guard.make_step()
-    if guard.leave:
-        break
-  print(guard)
-  print(guard.history)
-  guard.print_places()
+            for i in range(0, 100000):
+                guard.make_step()
+                if guard.leave:
+                    break
+                if guard.loop:
+                    loop_cnt += 1
+                    break
+    print(loop_cnt)
 
-def golden():
-  parse_map()
-  map_w = guard.map_w
-  map_h = guard.map_h
-  loop_cnt = 0
-  print(f'{map_w}x{map_h}')
-  for ih in range(0, map_h):
-      for iw in range(0, map_w):
-          parse_map()
-          if guard.world_map[ih][iw] == '#' or guard.world_map[ih][iw] == '^':
-              continue
-          else:
-              guard.world_map[ih][iw] = '#'
-          for i in range(0, 100000):
-              guard.make_step()
-              if guard.leave:
-                  break
-              if guard.loop:
-                  loop_cnt += 1
-                  break
-  print(loop_cnt)
+def golden_thr(int_txt):
+    lines = re.findall(r"([^\n]+)\n?", in_txt)
+    guard = Guard(0, 0, '^')
+    guard.parse_map(lines)
+    map_w = guard.map_w
+    map_h = guard.map_h
+    loop_cnt = 0
+    print(f'{map_w}x{map_h}')
+    tasks = []
+    for ih in range(0, map_h):
+        for iw in range(0, map_w):
+            if guard.world_map[ih][iw] == '#' or guard.world_map[ih][iw] == '^':
+                continue
+            else:
+                tasks.append((ih, iw))
+
+    def check_loop(inpt):
+        ih, iw = inpt
+        guard = Guard(0, 0, '^')
+        guard.parse_map(lines)
+        guard.world_map[ih][iw] = '#'
+        for i in range(0, 100000):
+            guard.make_step()
+            if guard.leave:
+                return 0
+            if guard.loop:
+                return 1
+        return 0
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=50) as executor:
+        results = list(executor.map(check_loop, tasks))
+        sum(results)
 
 if __name__ == "__main__":
-  silver()
-  golden()
+    in_txt = get_input(False)
+    print('Silver:')
+    silver(in_txt)
+    print('')
+    print('Golden:')
+    golden_thr(in_txt)
