@@ -70,18 +70,13 @@ impl Guard {
             return;
         }
 
-        let direction_map = vec![
-            ('^', (-1, 0), '>'),
-            ('>', (0, 1), 'V'),
-            ('V', (1, 0), '<'),
-            ('<', (0, -1), '^'),
-        ];
-
-        let (dr, dc, next_d) = direction_map
-            .iter()
-            .find(|&&(dir, _, _)| dir == self.d)
-            .map(|&(_, delta, next_dir)| (delta.0, delta.1, next_dir))
-            .unwrap();
+        let (dr, dc, next_d) = match self.d {
+            '^' => (-1, 0, '>'),
+            '>' => (0, 1, 'V'),
+            'V' => (1, 0, '<'),
+            '<' => (0, -1, '^'),
+            _ => panic!("Invalid direction"),
+        };
 
         let new_r = self.r + dr;
         let new_c = self.c + dc;
@@ -99,11 +94,8 @@ impl Guard {
             self.d = next_d;
         }
 
-        let current_step = Step::new(self.r, self.c, self.d);
-        if self.history.contains(&current_step) {
+        if !self.history.insert(Step::new(self.r, self.c, self.d)) {
             self.loop_detected = true;
-        } else {
-            self.history.insert(current_step);
         }
     }
 
