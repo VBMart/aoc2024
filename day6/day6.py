@@ -23,6 +23,12 @@ def get_input(debug: bool = False):
     with open('day6.txt', 'r') as f:
         return f.read()
 
+direction_map = {
+    '^': (-1, 0, '>'),
+    '>': (0, 1, 'V'),
+    'V': (1, 0, '<'),
+    '<': (0, -1, '^'),
+}
 
 class Step:
     r: int
@@ -85,16 +91,10 @@ class Guard:
     def print_places(self):
         self.print_arr(self.places)
 
+
     def make_step(self):
         if self.leave or self.loop:
             return
-
-        direction_map = {
-            '^': (-1, 0, '>'),
-            '>': (0, 1, 'V'),
-            'V': (1, 0, '<'),
-            '<': (0, -1, '^'),
-        }
 
         dr, dc, next_d = direction_map[self.d]
         new_r, new_c = self.r + dr, self.c + dc
@@ -109,7 +109,15 @@ class Guard:
         else:
             self.d = next_d
 
+        # key = f'{self.r}x{self.c}'
+        # if key in self.history:
+        #     if self.history[key][2] == self.d:
+        #         self.loop = True
+        #         return
+        # else:
+        #     self.history[key] = (self.r, self.c, self.d)
         current_step = Step(r=self.r, c=self.c, d=self.d)
+        # current_step = (self.r, self.c, self.d)
         if current_step in self.history:
             self.loop = True
         else:
@@ -124,7 +132,7 @@ class Guard:
         return cnt
 
     def go(self):
-        for i in range(0, 100000):
+        for i in range(0, self.map_w * self.map_h):
             self.make_step()
             if self.leave:
                 return 0
@@ -155,6 +163,7 @@ class Guard:
             self.world_map.append(m_l)
             self.places.append(g_l)
 
+
 def silver(in_txt):
     lines = re.findall(r"([^\n]+)\n?", in_txt)
     guard = Guard(0, 0, '^')
@@ -162,7 +171,8 @@ def silver(in_txt):
     guard.go()
     print(guard)
 
-def golden(in_txt):
+
+def golden(in_txt = None):
     lines = re.findall(r"([^\n]+)\n?", in_txt)
     guard = Guard(0, 0, '^')
     guard.parse_map(lines)
@@ -171,7 +181,9 @@ def golden(in_txt):
     print(f'{guard.map_w}x{guard.map_h}')
     tasks = []
     for step in guard.history:
+        # tasks.append((guard.history[step][0], guard.history[step][1]))
         tasks.append((step.r, step.c))
+        # tasks.append((step[0], step[1]))
     tasks = set(tasks)
     print(f'Tasks: {len(tasks)}')
 
