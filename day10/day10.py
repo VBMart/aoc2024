@@ -53,7 +53,6 @@ class Day10:
                     self.start_positions.append((i_row, i_col))
 
     def find_all_ends(self):
-        map = self.map
         self.end_positions = []
         for i_row in range(self.map_height):
             for i_col in range(self.map_width):
@@ -82,7 +81,7 @@ class Day10:
             ends = set([r[-1] for r in self.routes])
             sum_ends += len(ends)
             sum_routes += len(self.routes)
-        return (sum_ends, sum_routes)
+        return sum_ends, sum_routes
 
 
 def silver(in_txt):
