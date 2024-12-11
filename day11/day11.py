@@ -27,23 +27,26 @@ class Day11:
         items = re.findall(r"(\d+)", in_txt)
         self.stones = [int(a) for a in items]
 
+    def fill_from_int(self, n):
+        self.stones = [n]
+
     def blink(self):
         new_stones = []
         for i in range(len(self.stones)):
             stone = self.stones[i]
             s_stone = f'{stone}'
+            len_stones = len(s_stone)
             if stone == 0:
                 new_stones.append(1)
-            elif len(s_stone) %2 == 0:
-                l_stone = s_stone[:len(s_stone) // 2]
-                r_stone = s_stone[len(s_stone) // 2:]
+            elif len_stones % 2 == 0:
+                l_stone = s_stone[:len_stones // 2]
+                r_stone = s_stone[len_stones // 2:]
                 new_stones.append(int(l_stone))
                 new_stones.append(int(r_stone))
             else:
                 new_stones.append(2024 * stone)
         self.stones = new_stones
         # print(self.stones)
-
 
 def silver(in_txt):
     day11 = Day11(in_txt)
@@ -66,14 +69,16 @@ def golden(in_txt):
     i = 0
     t = time.time()
     cache = {}
+    d = Day11('0', is_golden=True)
     for stone in day11.stones:
         if i % 1000000 == 0:
-            print(f'Iteration {i // 1000000} / {len(day11.stones) // 1000000 }  (time: {time.time() - t})')
+            print(f'Iteration {i // 1000000} / {len(day11.stones) // 1000000 } (cache: {len(cache)}) (time: {time.time() - t})')
             t = time.time()
-        if stone in cache:
-            cnt.append(cache[stone])
+        n = cache.get(stone, None)
+        if n:
+            cnt.append(n)
         else:
-            d = Day11(f'{stone}', is_golden=True)
+            d.fill_from_int(stone)
             for i in range(p1, p2):
                 d.blink()
             cache[stone] = len(d.stones)
