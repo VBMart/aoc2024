@@ -64,6 +64,7 @@ class Day16:
     def __init__(self, in_txt, is_golden=False):
         self.is_golden = is_golden
         self.parse_input(in_txt)
+        self.path = []
 
     def parse_input(self, in_txt):
         in_map = re.findall(r"([#.ES\n]+)", in_txt)
@@ -90,6 +91,13 @@ class Day16:
                 p = Point(iw, ih)
                 if p in self.walls:
                     print(Fore.RED + '#', end='')
+                elif p in self.path:
+                    if self.start == p:
+                        print(Fore.GREEN + 'S', end='')
+                    elif self.end == p:
+                        print(Fore.GREEN + 'E', end='')
+                    else:
+                        print(Fore.BLUE + 'O', end='')
                 elif self.person.position == p:
                     print(Fore.GREEN + self.person.direction, end='')
                 elif self.start == p:
@@ -121,6 +129,7 @@ class Day16:
         heapq.heappush(queue, (0, start, initial_direction))  # (cost, point, direction)
 
         visited = set()
+        parents = {}
 
         while queue:
             cost, current, direction = heapq.heappop(queue)
@@ -131,6 +140,13 @@ class Day16:
             visited.add(state)
 
             if current == end:
+                self.path = []
+                current = state
+                while current in parents:
+                    self.path.append(Point(current[0], current[1]))
+                    current = parents[current]
+                self.path.append(Point(current[0], current[1]))
+                self.path.reverse()
                 return cost
 
             # Rotate (90 degrees left or right)
@@ -138,22 +154,27 @@ class Day16:
             for rotation in [-1, 1]:  # Left or right
                 new_dir_idx = (current_dir_idx + rotation) % 4
                 new_direction = directions[new_dir_idx]
-                heapq.heappush(queue, (cost + 1000, current, new_direction))
+                new_state = (current.x, current.y, new_direction)
+                if new_state not in visited:
+                    heapq.heappush(queue, (cost + 1000, current, new_direction))
+                    parents[new_state] = state
 
             # Move forward
             dir_idx = directions.index(direction)
             dx, dy = direction_vectors[dir_idx]
             new_point = Point(current.x + dx, current.y + dy)
 
-            if self.is_hall(new_point):
+            new_state = (new_point.x, new_point.y, direction)
+            if self.is_hall(new_point) and new_state not in visited:
                 heapq.heappush(queue, (cost + 1, new_point, direction))
+                parents[new_state] = state
 
         return math.inf
 
 def silver(in_txt):
     day = Day16(in_txt)
-    # day.print_map()
     print(day.dijkstra())
+    day.print_map()
 
 def golden(in_txt):
     day = Day16(in_txt, is_golden=True)
