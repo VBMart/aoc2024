@@ -27,6 +27,14 @@ def print_arr(arr):
             print(row)
     print('')
 
+colors = {
+    'r': Back.RED,
+    'g': Back.GREEN,
+    'b': Back.BLACK,
+    'u': Back.BLUE,
+    'w': Back.WHITE,
+}
+
 class Day19:
 
     def __init__(self, in_txt):
@@ -49,6 +57,29 @@ class Day19:
         for i in range(2, len(lines)):
             line = lines[i]
             self.designs.append(line)
+
+        self.clean_up_patterns()
+
+    def clean_up_patterns(self):
+        print(f'Patterns in input: {len(self.patterns)}')
+        new_patterns = set()
+        for pattern in self.patterns:
+            is_useful = False
+            for design in self.designs:
+                if design.find(pattern) != -1:
+                    is_useful = True
+                    break
+            if is_useful:
+                new_patterns.add(pattern)
+            else:
+                print(f'{pattern} is not useful')
+        self.patterns = new_patterns
+        print(f'Filtered patterns: {len(self.patterns)}')
+
+    def print_pattern(self, pattern):
+        for letter in pattern:
+            print(colors[letter] + letter, end='')
+        print(Back.RESET + Fore.RESET + '')
 
     def make_design(self, design, current):
         for pattern in self.patterns:
@@ -76,19 +107,32 @@ class Day19:
                 print(f'{design} NO')
         return cnt
 
+
+class Day19Golden(Day19):
+
+    def __init__(self, in_txt):
+        super().__init__(in_txt)
+        self.design_variants = {}
+
+    def combine_variants(self, design):
+        pass
+
 def silver(in_txt, is_debug):
     day = Day19(in_txt)
-    print(day.patterns)
+    # for pattern in day.patterns:
+    #     day.print_pattern(pattern)
     # print(day.can_combine_design('bwurrg'))
 
     print(f'Silver: {day.check_designs()}')
 
 def golden(in_txt):
     day = Day19(in_txt)
+    print(day.patterns)
+
 
 if __name__ == "__main__":
-    debug = False
-    # debug = True
+    # debug = False
+    debug = True
     in_txt = get_input(debug)
     print('Silver:')
     silver(in_txt, debug)
