@@ -213,16 +213,50 @@ def silver(in_txt, is_debug):
     print(f'Cheats: {cheat_numbers} times')
 
 
-def golden(in_txt):
+def golden(in_txt, is_debug):
     day = Day20(in_txt)
+    print(f'Start: {day.start}')
+    print(f'End: {day.end}')
+    cheat_limit = 100
+    if is_debug:
+        cheat_limit = 50
+    initial_path_time = day.dijkstra()
+    initial_path = day.path
+    cheat_times = {}
+
+    for i_path in range(len(initial_path)):
+        for j_path in range(i_path + cheat_limit, len(initial_path)):
+            ip_start = i_path
+            ip_end = j_path
+            ip_delta = ip_end - ip_start
+
+            p_start = initial_path[ip_start]
+            p_end = initial_path[ip_end]
+            dx = p_end.x - p_start.x
+            dy = p_end.y - p_start.y
+            l = abs(dx) + abs(dy)
+            if l > 20 or l == 1:
+                continue
+            if l + cheat_limit <= ip_delta:
+                new_delta = ip_delta - l
+                if new_delta not in cheat_times:
+                    cheat_times[new_delta] = 0
+                cheat_times[new_delta] += 1
+
+    cheat_times = {k: v for k, v in sorted(cheat_times.items(), key=lambda item: item[0])}
+    cheat_numbers = 0
+    for k, v in cheat_times.items():
+        print(f'Cheats: {v} times for {k} steps')
+        cheat_numbers += v
+    print(f'Cheats: {cheat_numbers} times')
 
 if __name__ == "__main__":
     debug = False
     # debug = True
     in_txt = get_input(debug)
-    print('Silver:')
-    silver(in_txt, debug)
-    print('')
-    # print('Golden:')
-    # golden(in_txt)
+    # print('Silver:')
+    # silver(in_txt, debug)
     # print('')
+    print('Golden:')
+    golden(in_txt, debug)
+    print('')
