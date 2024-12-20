@@ -176,13 +176,11 @@ def silver(in_txt, is_debug):
         if wall.y < 0 or wall.y >= day.map_height:
             continue
         walls.append(wall)
-    t1 = time.time()
     for i_wall in range(len(walls)):
         wall = walls[i_wall]
 
         ip_start = len(initial_path)
         ip_end = -1
-        is_found = False
 
         for dir_idx in range(len(directions)):
             dx, dy = direction_vectors[dir_idx]
@@ -206,18 +204,6 @@ def silver(in_txt, is_debug):
         cheat_times[ip_delta] += 1
         day.cheats.append(wall)
 
-        # day.walls.remove(wall)
-        # path_time = day.dijkstra()
-        # # day.print_map()
-        # delta = initial_path_time - path_time
-        # if delta > cheat_limit:
-        #     if delta not in cheat_times:
-        #         cheat_times[delta] = 0
-        #     cheat_times[delta] += 1
-        #     day.cheats.append(wall)
-        # day.walls.append(wall)
-
-    # day.dijkstra()
     day.print_map()
     cheat_times = {k: v for k, v in sorted(cheat_times.items(), key=lambda item: item[0])}
     cheat_numbers = 0
@@ -226,7 +212,6 @@ def silver(in_txt, is_debug):
         cheat_numbers += v
     print(f'Cheats: {cheat_numbers} times')
 
-    # print(cheat_times)
 
 def golden(in_txt):
     day = Day20(in_txt)
