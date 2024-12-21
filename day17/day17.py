@@ -65,7 +65,8 @@ class Step:
         self.operand = operand
 
     def __repr__(self):
-        return f'Step(instruction={self.instruction}, operand={self.operand})'
+        return f'[{self.instruction.value},{self.operand}] {self.instruction}, {self.operand}'
+        # return f'Step(instruction={self.instruction}, operand={self.operand})'
 
 class Computer:
     def __init__(self, a, b, c, program):
@@ -94,7 +95,7 @@ class Computer:
         self.is_failed = False
 
     def __repr__(self):
-        return f'Computer(a={self.a}, b={self.b}, c={self.c})'
+        return f'Computer(a={self.a}, b={self.b}, c={self.c}) (a={bin(self.a)[2:]} b={bin(self.b % 8)[2:]} c={bin(self.c % 8)[2:]})'
 
     def combo_operand_value(self, operand):
         if operand <= 3:
@@ -141,15 +142,52 @@ class Computer:
             self.instruction_pointer += 2
         self.i_step += 1
 
+    def do_str(self, step: Step):
+        s = ''
+        op = step.operand
+        combo_op = ''
+        if step.operand <= 3:
+            combo_op = str(step.operand)
+        elif step.operand == 4:
+            combo_op = 'a'
+        elif step.operand == 5:
+            combo_op = 'b'
+        elif step.operand == 6:
+            combo_op = 'c'
+
+        if step.instruction == Instruction.adv:
+            s = f'a = a // (2 ** {combo_op})'
+        elif step.instruction == Instruction.bxl:
+            s = f'b = b ^ {op}'
+        elif step.instruction == Instruction.bst:
+            s = f'b = {combo_op} % 8'
+        elif step.instruction == Instruction.jnz:
+            if self.a == 0:
+                s = 'nop'
+            else:
+                s = f'jmp to {op}'
+        elif step.instruction == Instruction.bxc:
+            s = 'b = b ^ c'
+        elif step.instruction == Instruction.out:
+            s = f'out({combo_op} % 8)'
+        elif step.instruction == Instruction.bdv:
+            s = f'b = a // (2 ** {combo_op})'
+        elif step.instruction == Instruction.cdv:
+            s = f'c = a // (2 ** {combo_op})'
+        return s
+
     def run(self):
         while self.instruction_pointer < len(self.program)-1:
             instruction_number = self.program[self.instruction_pointer]
             operand = self.program[self.instruction_pointer+1]
             step = Step(Instruction.get_by_number(instruction_number), operand)
-            # print(f'{self.i_step}: {step}')
+            # print(f'{self.i_step}: {step} -> {self.do_str(step)}')
+            # s = f'{self}'
             self.do(step)
-            if self.is_failed:
-                break
+            # print(f'{s} -> {self}')
+            # print('')
+            # if self.is_failed:
+            #     break
             if self.i_step >= 200:
                 print('Too many steps')
                 break
@@ -161,6 +199,7 @@ class Day17:
     def __init__(self, in_txt, is_golden=False):
         self.computer = None
         self.program = []
+        self.s_program = ''
         self.is_golden = is_golden
         self.parse_input(in_txt)
 
@@ -169,8 +208,8 @@ class Day17:
         b = int(re.findall(r"Register B: (\d+)", in_txt)[0])
         c = int(re.findall(r"Register C: (\d+)", in_txt)[0])
 
-        prg_in = re.findall(r"Program: (.+)", in_txt)[0]
-        numbers = re.findall(r"(\d+)", prg_in)
+        self.s_program = re.findall(r"Program: (.+)", in_txt)[0]
+        numbers = re.findall(r"(\d+)", self.s_program)
         program = [int(x) for x in numbers]
 
         self.computer = Computer(a, b, c, program)
@@ -186,9 +225,53 @@ def silver(in_txt):
     print(day.computer.str_output)
     print(day.computer.i_step)
 
+def make_num(num):
+    res = []
+    for b1 in range(8):
+        b2 = b1 ^ 1
+        pow_b2 = 2 ** b2
+        for c in range(8):
+            b3 = b2 ^ c
+            b4 = b3 ^ 6
+            a = c * (2 ** pow_b2) + b1
+            if a % 8 != b1:
+                continue
+            if b4 == num:
+                res.append((a, b1, c))
+    return res
+
 
 def golden(in_txt):
     day = Day17(in_txt, is_golden=True)
+
+    for i in range(8):
+        print(f'{i}:')
+        arr = make_num(i)
+        for a, b, c in arr:
+            print(f'{a} = {bin(a)[2:]}')
+
+    print(day.s_program)
+    print(len(day.computer.program))
+    a_len_bin = len(day.computer.program) * 3
+    print(f'Bits in a: {a_len_bin}, Bytes: {a_len_bin // 8}')
+    print(f'Max(a) = {2 ** a_len_bin - 1}')
+    # for a in range(1, 1000):
+    #     day.computer.reset()
+    #     day.computer.a = a
+    #     day.run()
+    #     if len(day.computer.str_output) > 1:
+    #         print(f'{a} = {bin(a)[2:]} -> {day.computer.str_output}')
+
+
+    sa = '1000000010'
+    a = int(sa, 2)
+    print(f'{a} = {bin(a)[2:]}')
+    day.computer.reset()
+    day.computer.a = a
+    day.run()
+    print(f'{a} = {bin(a)[2:]} -> {day.computer.str_output}')
+
+    return
 
     deltas = set()
     t1 = time.time()
