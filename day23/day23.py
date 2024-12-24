@@ -90,6 +90,24 @@ class Day23:
         #     print(c)
         return len(str_connections)
 
+
+    def golden(self):
+        pc_connections = {}
+        for c in self.connections:
+            if c.a not in pc_connections:
+                pc_connections[c.a] = 1
+            else:
+                pc_connections[c.a] += 1
+            if c.b not in pc_connections:
+                pc_connections[c.b] = 1
+            else:
+                pc_connections[c.b] += 1
+
+        print(pc_connections)
+        print(len(pc_connections))
+
+
+
 def silver(in_txt, is_debug):
     day = Day23(in_txt)
     cnt = day.make3()
@@ -98,15 +116,15 @@ def silver(in_txt, is_debug):
 
 def golden(in_txt, is_debug):
     day = Day23(in_txt)
-
+    day.golden()
 
 if __name__ == "__main__":
-    debug = False
-    # debug = True
+    # debug = False
+    debug = True
     in_txt = get_input(debug)
-    print('Silver:')
-    silver(in_txt, debug)
-    # print('')
-    # print('Golden:')
-    # golden(in_txt, debug)
-    # print('')
+    # print('Silver:')
+    # silver(in_txt, debug)
+    print('')
+    print('Golden:')
+    golden(in_txt, debug)
+    print('')
