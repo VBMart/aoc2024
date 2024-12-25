@@ -29,6 +29,10 @@ def print_arr(arr):
 
 class Device:
     def __init__(self, a, op, b, c):
+        tmp = a
+        if a > b:
+            a = b
+            b = tmp
         self.a = a
         self.op = op
         self.b = b
@@ -56,6 +60,9 @@ class Device:
     def __hash__(self):
         return hash((self.a, self.op, self.b, self.c))
 
+    def get_expression(self):
+        return f'({self.a} {self.op} {self.b})'
+
 
 
 class Day24:
@@ -63,6 +70,7 @@ class Day24:
         self.values = {}
         self.devices_inp = []
         self.devices_tmp = []
+        self.formulas = {}
         self.parse_input(in_txt)
 
     def parse_input(self, in_txt):
@@ -73,8 +81,10 @@ class Day24:
 
         devices = re.findall(r"([a-z0-9]{3}) (AND|OR|XOR) ([a-z0-9]{3}) -> ([a-z0-9]{3})", in_txt)
         for a, op, b, c in devices:
-            self.devices_inp.append(Device(a, op, b, c))
+            dev = Device(a, op, b, c)
+            self.devices_inp.append(dev)
             self.devices_tmp.append(Device(a, op, b, c))
+            self.formulas[c] = dev.get_expression()
 
     def step(self):
         for i_device in reversed(range(len(self.devices_tmp))):
@@ -85,17 +95,52 @@ class Day24:
                 self.values[device.c] = device.calc(a, b)
                 self.devices_tmp.pop(i_device)
 
+
     def run(self):
         while self.devices_tmp:
             self.step()
         print(self.values)
 
+    def resolve_step(self):
+        cnt = 0
+        for device in self.devices_inp:
+            for k, v in self.formulas.items():
+                if device.c == k:
+                    continue
+                if v.find(device.c) != -1:
+                    cnt += 1
+                    self.formulas[k] = v.replace(device.c, device.get_expression())
+
+        return cnt
+
+    def resolve(self):
+        while self.resolve_step() > 0:
+            pass
+
+        z_min = 99
+        z_max = 0
+        for k, v in self.formulas.items():
+            if k.startswith('z'):
+                n = int(k[1:])
+                if n < z_min:
+                    z_min = n
+                if n > z_max:
+                    z_max = n
+
+        for z in range(z_min, z_max + 1):
+            z_str = f'z{z:02}'
+            print(f'{z_str} = {self.formulas[z_str]}')
+            print('')
+
+        print('')
+        return z_min, z_max
 
 def silver(in_txt, is_debug):
     day = Day24(in_txt)
     day.run()
+
     z_arr = {}
-    for k, v in day.values.items():
+    for k, v in day.formulas.items():
         if k.startswith('z'):
             z_arr[k] = v
 
@@ -108,8 +153,27 @@ def silver(in_txt, is_debug):
         n *= 2
     print(v)
 
+
 def golden(in_txt, is_debug):
     day = Day24(in_txt)
+    z_min, z_max = day.resolve()
+
+    z_arr = {}
+    invalid_operands = set()
+    z_with_invalid_operands = set()
+    for k, v in day.formulas.items():
+        if k.startswith('z'):
+            z_arr[k] = v
+            ops = re.findall(r"([a-z]{3})", v)
+            for op in ops:
+                invalid_operands.add(op)
+                z_with_invalid_operands.add(k)
+
+    z_sorted = sorted(z_with_invalid_operands)
+    for z in z_sorted:
+        print(f'{z} = {z_arr[z]}')
+        print('')
+
 
 if __name__ == "__main__":
     debug = False
