@@ -5,6 +5,7 @@ import os
 import re
 from colorama import Fore, Back, Style, init
 import time
+import graphviz
 
 
 def get_input(debug: bool = False):
@@ -117,23 +118,53 @@ class Day24:
         while self.resolve_step() > 0:
             pass
 
+    def get_min_max_z(self):
         z_min = 99
         z_max = 0
-        for k, v in self.formulas.items():
-            if k.startswith('z'):
-                n = int(k[1:])
+        for dev in self.devices_inp:
+            if dev.c.startswith('z'):
+                n = int(dev.c[1:])
                 if n < z_min:
                     z_min = n
                 if n > z_max:
                     z_max = n
 
-        for z in range(z_min, z_max + 1):
-            z_str = f'z{z:02}'
-            print(f'{z_str} = {self.formulas[z_str]}')
-            print('')
-
-        print('')
         return z_min, z_max
+
+    def get_device_by_c(self, c):
+        for dev in self.devices_inp:
+            if dev.c == c:
+                return dev
+        return None
+
+    def draw(self):
+        dot = graphviz.Digraph(comment='The Round Table')
+        for device in self.devices_inp:
+            if device.a.startswith('x') or device.a.startswith('y') or device.b.startswith('x') or device.b.startswith('y'):
+                dot.node(device.a, shape='circle')
+
+            shapes = ['circle', 'square', 'triangle', 'diamond', 'parallelogram', 'trapezium', 'invtrapezium', 'invhouse', 'house']
+            shapes_op = {
+                'AND': 'diamond',
+                'OR': 'square',
+                'XOR': 'triangle',
+            }
+            shape = shapes_op.get(device.op, 'house')
+            if device.c.startswith('z'):
+                dot.node(
+                    device.c,
+                    label=f'{device.c}\n{device.op}',
+                    shape=shape,
+                    style='filled',
+                    color='lightgrey'
+                )
+            else:
+                dot.node(device.c, label=f'{device.c}\n{device.op}', shape=shape)
+
+        for device in self.devices_inp:
+            dot.edge(device.a, device.c)
+            dot.edge(device.b, device.c)
+        dot.render('graph', format='png', cleanup=True)
 
 def silver(in_txt, is_debug):
     day = Day24(in_txt)
@@ -156,7 +187,143 @@ def silver(in_txt, is_debug):
 
 def golden(in_txt, is_debug):
     day = Day24(in_txt)
-    z_min, z_max = day.resolve()
+    # day.draw()
+    z_min, z_max = day.get_min_max_z()
+    problem_nodes = set()
+
+    for z in range(z_min, z_max + 1):
+        ind_str = f'{z:02}'
+        z_str = f'z{ind_str}'
+        is_z_valid = True
+        reason = ''
+
+        dev_z = day.get_device_by_c(z_str)
+        if z == 0:
+            if dev_z.get_expression() != '(x00 XOR y00)':
+                reason = '\tz=0'
+                problem_nodes.add(z_str)
+                is_z_valid = False
+        elif z == 1:
+            pass
+        elif z == z_max:
+            if dev_z.op != 'OR':
+                reason = '\tz_max must be OR'
+                problem_nodes.add(z_str)
+                is_z_valid = False
+        else:
+            if dev_z.op != 'XOR':
+                reason = '\tmust be XOR'
+                problem_nodes.add(z_str)
+                is_z_valid = False
+            if is_z_valid:
+                dev_p1 = day.get_device_by_c(dev_z.a)
+                dev_p2 = day.get_device_by_c(dev_z.b)
+                if dev_p1 is None:
+                    reason = f'\tPrev not found ({dev_z.a})'
+                    problem_nodes.add(z_str)
+                    is_z_valid = False
+                if dev_p2 is None:
+                    reason = f'\tPrev not found ({dev_z.b})'
+                    problem_nodes.add(z_str)
+                    is_z_valid = False
+                if is_z_valid:
+                    dev_or = None
+                    dev_xor = None
+                    if dev_p1.op == 'OR':
+                        dev_or = dev_p1
+                    if dev_p1.op == 'XOR':
+                        dev_xor = dev_p1
+                    if dev_p2.op == 'OR':
+                        dev_or = dev_p2
+                    if dev_p2.op == 'XOR':
+                        dev_xor = dev_p2
+                    if dev_or is None:
+                        if dev_p1.op != 'XOR':
+                            reason = f'\tFirst must be OR ({dev_p1}) ({dev_p2})'
+                            problem_nodes.add(dev_p1.c)
+                        elif dev_p2.op != 'XOR':
+                            reason = f'\tSecond must be OR ({dev_p1}) ({dev_p2})'
+                            problem_nodes.add(dev_p2.c)
+                        else:
+                            if not (dev_p1.a.startswith('x') and dev_p1.b.startswith('y')):
+                                reason = f'\tNo XOR(OR+XOR) ({dev_p1}), ({dev_p2}) XOR must be from x, y: ({dev_p1})'
+                                problem_nodes.add(dev_p1.c)
+                            else:
+                                reason = f'\tNo XOR(OR+XOR) ({dev_p1}), ({dev_p2}) XOR must be from x, y: ({dev_p2})'
+                                problem_nodes.add(dev_p2.c)
+                        is_z_valid = False
+                    if dev_xor is None:
+                        if dev_p1.op != 'OR':
+                            reason = f'\tFirst must be XOR ({dev_p1}) ({dev_p2})'
+                            problem_nodes.add(dev_p1.c)
+                        elif dev_p2.op != 'OR':
+                            reason = f'\tSecond must be XOR ({dev_p1}) ({dev_p2})'
+                            problem_nodes.add(dev_p2.c)
+                        else:
+                            reason = f'No XOR(OR+XOR) ({dev_p1}), ({dev_p2})'
+                        is_z_valid = False
+                    if is_z_valid:
+                        if not (dev_xor.a.startswith('x') and dev_xor.b.startswith('y')):
+                            reason = 'XOR must be x XOR y'
+                            is_z_valid = False
+                        dev_or_p1 = day.get_device_by_c(dev_or.a)
+                        dev_or_p2 = day.get_device_by_c(dev_or.b)
+                        if dev_or_p1 is None:
+                            reason = f'Prev not found ({dev_or.a})'
+                            is_z_valid = False
+                        if dev_or_p2 is None:
+                            reason = f'Prev not found ({dev_or.b})'
+                            is_z_valid = False
+                        if is_z_valid:
+                            if dev_or_p1.op != 'AND':
+                                reason = f'\tmust be AND ({dev_or_p1}) [{dev_or}]'
+                                problem_nodes.add(dev_or_p1.c)
+                                is_z_valid = False
+                            if dev_or_p2.op != 'AND':
+                                reason = f'\tmust be AND ({dev_or_p2}) [{dev_or}]'
+                                problem_nodes.add(dev_or_p2.c)
+                                is_z_valid = False
+
+
+        if not is_z_valid:
+            print(f'{reason}: {dev_z}')
+
+    problems = ','.join(sorted(problem_nodes))
+    print(problems)
+
+    return
+
+    for z in range(z_min, z_max + 1):
+    # for z in range(z_min, 5):
+        ind_str = f'{z:02}'
+        z_str = f'z{ind_str}'
+        is_z_valid = True
+        z_must_contain = set()
+        if z == 0:
+            z_must_contain.add('x00 XOR y00')
+        else:
+            z_must_contain.add(f'x{ind_str} XOR y{ind_str}')
+        for zmc in z_must_contain:
+            if day.formulas[z_str].find(zmc) == -1:
+                is_z_valid = False
+
+        for dev in day.devices_inp:
+            if dev.c == z_str:
+                if z != z_max:
+                    if dev.op != 'XOR':
+                        is_z_valid = False
+                else:
+                    if dev.op != 'OR':
+                        is_z_valid = False
+
+        if not is_z_valid:
+            for dev in day.devices_inp:
+                if dev.c == z_str:
+                    print(dev)
+            print(f'{z_str} = {day.formulas[z_str]}')
+            print('')
+        # print(f'{z_str} = {day.formulas[z_str]}')
+        # print('')
 
     z_arr = {}
     invalid_operands = set()
